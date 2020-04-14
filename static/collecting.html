@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width" />
+
+    <style>
+      body { font-family: Tahoma, Geneva, sans-serif; }
+    </style>
+
+    <!-- colyseus.js client -->
+    <script type="text/javascript" src="/colyseus.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.0.0/lib/p5.min.js"></script>
+    <!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-analytics.js"></script>
+
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-database.js"></script>
+
+    <style type="text/css">
+      .player {
+        width: 100px;
+        height: 100px;
+        position: absolute;
+        padding-top: 24px;
+        box-sizing: border-box;
+        left: 0;
+        top: 0;
+      }
+    </style>
+
+  </head>
+  <body>
+    <strong>Record data</strong>
+    <select id="recordData">
+        <option value="0">Rock</option>
+        <option value="1">Paper</option>
+        <option value="2">Scissor</option>
+        <option value="3">Lizard</option>
+        <option value="4">Spock</option>
+    </select>
+    <button id='selectType'>select</button>
+    <button id='collecting'>collecting</button>
+    <button id='loadFirebase'>load database</button>
+    
+
+
+
+    <strong>Select a command </strong><br>
+    <button onclick="select(0)">Rock</button>
+    <button onclick="select(1)">Paper</button>
+    <br />
+    <button onclick="select(2)">Scissor</button>
+    <button onclick="select(3)">Lizard</button>
+    <button onclick="select(4)">Spock</button>
+    <video id="video"></video>
+    <script>
+        function setup(){
+            createCanvas(640, 500);
+        }
+        var host = window.document.location.host.replace(/:.*/, '');
+
+        var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
+        var room;
+
+        let myData=[];
+        let myLabels=[];
+        let targetLabel=0;
+        let state = "not";
+        const VIDEO_WIDTH = 640;
+        const VIDEO_HEIGHT = 500;
+        var commands=["rock", "paper", "scissor", "lizard", "spock"];
+
+        document.getElementById("collecting").addEventListener("click", ()=>{
+            if(state == "collecting"){
+                state = "not-collecting";
+            }else{
+                state = "collecting";
+            }
+            document.getElementById("collecting").innerHTML = state;
+        });
+        document.getElementById("selectType").addEventListener("click", ()=>{
+            targetLabel = document.getElementById("recordData").value;
+        });
+
+        document.getElementById("loadFirebase").addEventListener("click", ()=>{
+            console.log("Load database");
+            loadDatabase()
+        });
+
+        
+        async function setupCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error(
+                'Browser API navigator.mediaDevices.getUserMedia not available');
+            }
+
+            const video = document.getElementById('video');
+            const stream = await navigator.mediaDevices.getUserMedia({
+                'audio': false,
+                'video': {
+                facingMode: 'user',
+                // Only setting the video to a specified size in order to accommodate a
+                // point cloud, so on mobile devices accept the default size.
+                width:  VIDEO_WIDTH,
+                height:  VIDEO_HEIGHT
+                },
+            });
+            video.srcObject = stream;
+
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                resolve(video);
+                };
+            });
+        }
+
+        async function loadVideo() {
+            const video = await setupCamera();
+            video.play();
+            return video;
+        }
+
+
+        // let model, video, keypoints, predictions=[];
+        async function predictHand() {
+        // console.log("predict hand");
+            predictions = await model.estimateHands(video);
+            gotPoses(predictions)
+        // console.log('predictions: ', predictions)
+           setTimeout(() => predictHand(), 100);
+
+        }
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyB08mm3AI96brrQM2_BAlV7WyNqGVyWcNg",
+            authDomain: "rock-paper-scissors-89e2d.firebaseapp.com",
+            databaseURL: "https://rock-paper-scissors-89e2d.firebaseio.com",
+            projectId: "rock-paper-scissors-89e2d",
+            storageBucket: "rock-paper-scissors-89e2d.appspot.com",
+            messagingSenderId: "451386403206",
+            appId: "1:451386403206:web:f1c627fe7b65734e3d6407"
+        };
+        // Initialize Firebase
+        var defaultProject = firebase.initializeApp(firebaseConfig);
+
+
+        function saveToFirebase(points, index){
+            let gestures = defaultProject.database().ref('gestures');
+            var data = {
+                points: points,
+                code: index, 
+                text: commands[index],
+
+            }
+            gestures.push(data);
+            console.log("Data Saved");
+        }
+        async function main(){
+            model = await handpose.load();
+            console.log("model loaded");
+            try {
+                video = await loadVideo();
+            }catch(e){}
+            console.log("main")
+            predictHand();
+        
+            
+            
+        }
+
+        async function loadDatabase(){
+            let gestures = defaultProject.database().ref('gestures');
+            let result = {points:[], labels:[]};
+            await gestures.once('value', (results)=>{
+                let data = results.val();
+                let keys = Object.keys(data);
+                for(let k in data){
+                    let record = data[k];
+                    result['points'].push(record.points);
+                    result['labels'].push(record.text);
+                    console.log(record);
+                }
+                
+            });
+            console.log(result);
+        }
+
+        function gotPoses(predictions) {
+            if (predictions.length > 0) {
+                
+                let prediction = predictions[0];
+                console.log("Got pose", prediction.landmarks.length);
+                for (let j = 0; j < prediction.landmarks.length; j++) {
+                    let keypoint = prediction.landmarks[j];
+                    fill(255, 0, 0);
+                    noStroke();
+                    ellipse(keypoint[0], keypoint[1], 10, 10);
+                }
+                if (state == 'collecting') {
+                    var r = [];
+                    for(var i = 0; i<prediction.landmarks.length; i++){
+                        var m = prediction.landmarks[i];
+                        r.push(m[0]);
+                        r.push(m[1]);
+                        r.push(m[2]);
+                        
+                    }
+                    saveToFirebase(r, targetLabel);
+                    // myData.push(r);
+                    // myLabels.push(targetLabel);
+                }
+                
+            }
+        }
+
+
+
+       main();
+       
+
+
+    </script>
+
+  </body>
+</html>

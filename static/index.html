@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width" />
+
+    <style>
+      body { font-family: Tahoma, Geneva, sans-serif; }
+    </style>
+
+    <!-- colyseus.js client -->
+    <script type="text/javascript" src="/colyseus.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
+        <!-- Add Firebase products that you want to use -->
+        <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-auth.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-firestore.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/7.14.0/firebase-database.js"></script>
+    
+    <style type="text/css">
+      .player {
+        width: 100px;
+        height: 100px;
+        position: absolute;
+        padding-top: 24px;
+        box-sizing: border-box;
+        left: 0;
+        top: 0;
+      }
+    </style>
+
+  </head>
+  <body>
+    <strong>Record data</strong>
+    <select id="recordData">
+        <option value="0">Rock</option>
+        <option value="1">Paper</option>
+        <option value="2">Scissor</option>
+        <option value="3">Lizard</option>
+        <option value="4">Spock</option>
+    </select>
+    <button id='collecting'>collecting</button>
+    <button id='save'>save</button>
+    <button id='predict'>predict</button>
+
+
+
+    <strong>Select a command </strong><br>
+    <button onclick="select(0)">Rock</button>
+    <button onclick="select(1)">Paper</button>
+    <br />
+    <button onclick="select(2)">Scissor</button>
+    <button onclick="select(3)">Lizard</button>
+    <button onclick="select(4)">Spock</button>
+    <video id="video"></video>
+    <script>
+        var host = window.document.location.host.replace(/:.*/, '');
+
+        var client = new Colyseus.Client(location.protocol.replace("http", "ws") + "//" + host + (location.port ? ':' + location.port : ''));
+        var room;
+
+        var commands=["rock", "paper", "scissor", "lizard", "spock"];
+        const VIDEO_WIDTH = 640;
+const VIDEO_HEIGHT = 500;
+        async function setupCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error(
+      'Browser API navigator.mediaDevices.getUserMedia not available');
+  }
+
+  const video = document.getElementById('video');
+  const stream = await navigator.mediaDevices.getUserMedia({
+    'audio': false,
+    'video': {
+      facingMode: 'user',
+      // Only setting the video to a specified size in order to accommodate a
+      // point cloud, so on mobile devices accept the default size.
+      width:  VIDEO_WIDTH,
+      height:  VIDEO_HEIGHT
+    },
+  });
+  video.srcObject = stream;
+
+  return new Promise((resolve) => {
+    video.onloadedmetadata = () => {
+      resolve(video);
+    };
+  });
+}
+
+async function loadVideo() {
+  const video = await setupCamera();
+  video.play();
+  console.log("camera loaded");
+  return video;
+}
+
+
+let model, video, keypoints, predictions=[];
+async function predictHand() {
+   // console.log("predict hand");
+    predictions = await model.estimateHands(video);
+    gotPoses(predictions)
+    console.log("model hand pose loaded");
+   // console.log('predictions: ', predictions)
+   setTimeout(() => predictHand(), 100);
+
+}
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyB08mm3AI96brrQM2_BAlV7WyNqGVyWcNg",
+            authDomain: "rock-paper-scissors-89e2d.firebaseapp.com",
+            databaseURL: "https://rock-paper-scissors-89e2d.firebaseio.com",
+            projectId: "rock-paper-scissors-89e2d",
+            storageBucket: "rock-paper-scissors-89e2d.appspot.com",
+            messagingSenderId: "451386403206",
+            appId: "1:451386403206:web:f1c627fe7b65734e3d6407"
+        };
+        // Initialize Firebase
+        var defaultProject = firebase.initializeApp(firebaseConfig);
+
+
+        async function loadDatabase(){
+            let gestures = defaultProject.database().ref('gestures');
+            let result = {points:[], labels:[]};
+            await gestures.once('value', (results)=>{
+                let data = results.val();
+                let keys = Object.keys(data);
+                for(let k in data){
+                    let record = data[k];
+                    result['points'].push(record.points);
+                    result['labels'].push(parseInt(record.code));
+                }
+                
+            });
+            return result;
+        }
+async function main(){
+    model = await handpose.load();
+    try {
+        video = await loadVideo();
+    }catch(e){}
+    console.log("main")
+    predictHand();
+   
+    
+    
+}
+let myData=[];
+let myLabels=[];
+let targetLabel=1;
+let state = "not";
+function gotPoses(predictions) {
+    if (predictions.length > 0) {
+        let prediction = predictions[0];
+        if(state == 'predict'){
+            var r = [];
+            for(var i = 0; i<prediction.landmarks.length; i++){
+                var m = prediction.landmarks[i];
+                r.push(m[0]);
+                r.push(m[1]);
+                r.push(m[2]);
+                
+            }
+            tf.tidy(()=>{
+
+
+                let xs = tf.tensor2d([r]);
+                const inputMax = xs.max();
+                const inputMin = xs.min();  
+                const normalizedInputs = xs.sub(inputMin).div(inputMax.sub(inputMin));
+
+                let result = modelT.predict(xs).argMax(1).dataSync()[0]; 
+                console.log(commands[result])
+            });
+           
+            
+        }
+        
+    }
+}
+
+async function showMyData(){
+    var result = await loadDatabase();
+    let xs = tf.tensor2d(result.points); 
+    console.log("XS", xs.shape);
+    xs.print();
+    console.log(result.labels);
+    let l = tf.tensor1d(result.labels, 'int32');
+
+    
+    let ys = tf.oneHot(l, 5);
+    l.dispose();
+    console.log("YS", ys.shape);
+    ys.print();
+    
+
+   
+    
+    train(xs, ys);
+}
+
+
+let modelT;
+async function train(xs, ys){
+    console.log("TRAIN THE MODEL");
+    modelT = tf.sequential();
+    
+    let hidden = tf.layers.dense({
+        units: 68,
+        activation:'sigmoid',
+        inputDim: 63
+    });
+    let output = tf.layers.dense({
+        units:5,
+        activation:'softmax'
+    })
+    modelT.add(hidden);
+    modelT.add(output);
+    const lr = 0.1;
+    const optimizer = tf.train.sgd(lr);
+
+
+    modelT.compile({
+        optimizer: optimizer,
+        loss: 'categoricalCrossentropy'
+    });
+
+    const inputMax = xs.max();
+    const inputMin = xs.min();  
+    const labelMax = ys.max();
+    const labelMin = ys.min();
+    const normalizedInputs = xs.sub(inputMin).div(inputMax.sub(inputMin));
+    const normalizedLabels = ys.sub(labelMin).div(labelMax.sub(labelMin));
+    normalizedInputs.print();
+    normalizedLabels.print();
+    modelT.fit(normalizedInputs, normalizedLabels,{
+        epochs: 5000,
+        validationSplit:0.1,
+        shuffle:true
+    }).then(results => {
+        console.log(results.history.loss);
+    });
+}
+
+function onBatchEnd(batch, logs) {
+  console.log('Accuracy', logs.acc);
+}
+
+
+
+
+
+
+
+async function save(){
+    await modelT.save('downloads://my-model');
+}
+
+main();
+        client.joinOrCreate("GameRoom").then(room_instance => {
+            room = room_instance
+
+            var players = {};
+            var colors = ['red', 'green', 'yellow', 'blue', 'cyan', 'magenta'];
+            var characters = ["rock", "paper", "scissor", "lizard", "spock"];
+
+            
+           
+
+    
+    
+            // listen to patches coming from the server
+            room.state.players.onAdd = function (player, sessionId) {
+                var dom = document.createElement("div");
+                dom.className = "player";
+                dom.style.left = player.x + "px";
+                dom.style.top = player.y + "px";
+                dom.style.background = colors[Math.floor(Math.random() * colors.length)];
+                dom.innerText = "Player: " + characters[player.selection];
+
+                players[sessionId] = dom;
+                document.body.appendChild(dom);
+            }
+
+            room.state.players.onRemove = function (player, sessionId) {
+                document.body.removeChild(players[sessionId]);
+                delete players[sessionId];
+            }
+
+            room.state.players.onChange = function (player, sessionId) {
+                var dom = players[sessionId];
+                console.log(player.selection, characters, characters[player.selection])
+                dom.innerText = "Player: " + characters[player.selection];
+            }
+
+
+
+        });
+
+        function select (sel) {
+            room.send({select: sel });
+        }
+
+
+    </script>
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+
+<script>
+
+</script>
+  </body>
+</html>

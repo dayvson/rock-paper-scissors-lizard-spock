@@ -1,0 +1,92 @@
+/* CSS files add styling rules to your content 
+
+https://www.color-hex.com/color-palette/89905
+#ffc6c6	(255,198,198)
+#c5f8ff	(197,248,255)
+#c7cdff	(199,205,255)
+#fff9c0	(255,249,192)
+#3f4676	(63,70,118)
+
+*/
+* {
+    font-family: "IBM Plex Mono", monospace;
+  }
+  
+  h1,
+  h2,
+  h3,
+  span,
+  a {
+    color: rgba(63,70,118, 1);
+  }
+  
+  body {
+    text-align: center;
+    /* background-color: rgba(233, 51, 141); */
+  }
+  
+  #play-again-button{
+      display:none;
+  }
+  
+  #name {
+    width: 50%;
+    padding: 1rem;
+    outline: none;
+    height: 2rem;
+    border: 1px solid rgba(63,70,118, 1);
+    border-radius: 4px;
+    font-size: 1rem;
+    color: #43aea6;
+  }
+  
+  ::placeholder {
+    color: #43aea6;
+    opacity: 0.5; /* Firefox */
+  }
+  
+  #timeLabel {
+    float: left;
+  }
+  
+  #scoreLabel {
+    float: right;
+  }
+  #p5-canvas {
+    width: 848px;
+    position: relative;
+    margin: 1rem auto;
+  }
+  
+  #play-btn {
+    position: absolute;
+    left: 378px;
+    top: 220px;
+  }
+  
+  .btn {
+    border: 1px solid;
+    font-size: 1.25rem;
+    height: 50px;
+    min-width: 120px;
+    color: rgba(63,70,118, 1);
+    transition: color 0.3s;
+    transition: background-color 0.3s;
+  }
+  
+  .btn:hover {
+    border: 1px solid rgba(63,70,118, 1);
+    font-size: 1.25rem;
+    color: #fff;
+    background-color: rgba(63,70,118, 1);
+  }
+  
+  #topbar {
+    max-width: 640px;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    margin: 0rem auto;
+    height: 30px;
+    border: 1px solid rgba(63,70,118, 1);
+  }
+  
