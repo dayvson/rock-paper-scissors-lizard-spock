@@ -34,7 +34,7 @@ function JoinRoom(room_instance, err) {
         GameManager.roundState = room.state.roundState;
         if(GameManager.roundState == "draw"){
             GameManager.reset();
-            room.send({newRound:true});
+            //room.send({newRound:true});
         }
     }
 
@@ -48,3 +48,5 @@ function JoinRoom(room_instance, err) {
     location.hash = room.id;
     console.log("My ID:", room.sessionId, room.state.round, room.state.winner);
 };
+
+tryToJoinRoom();

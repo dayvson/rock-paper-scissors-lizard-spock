@@ -28,6 +28,7 @@ export class State extends Schema {
     public round = 0;
     @type("string")
     public winner = "";
+
     whoWins(sel1:number, sel2:number){
         let result = false;
         if(sel1 == -1 || sel2 == -1) return false;
@@ -47,19 +48,23 @@ export class State extends Schema {
     }
     checkMatch(){
         
+        console.log("####CHECK MATCH:");
        
+        if(Object.keys(this.players).length < 2){
+            console.log("We don't have two players yet");
+            this.roundState = "waiting";
+            return;
+        }else{
+            this.roundState = "ready";
+        }
+        
+        
         let bothPlayers: Array<any> = [];
-
         for (let id in this.players) {
             const player: Player = this.players[id];
             bothPlayers.push(player);
         }
-        if(bothPlayers.length < 2){
-            console.log("We don't have two players yet");
-            this.roundState = "waiting";
-        }else{
-            this.roundState = "ready";
-        }
+        
 
         if(this.roundState == "waiting" || bothPlayers[0].selection == -1 || bothPlayers[1].selection == -1 ){
             return;

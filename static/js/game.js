@@ -26,6 +26,7 @@ function playButtonHandler(){
     playBtn.style.display = "none";
     playImg.style.display = "none";
     playAgain.style.display = "none";
+
     setTimeout(()=> {
         GameManager.lastTimestamp = millis();
         GameManager.reset();
@@ -39,7 +40,10 @@ playAgain.addEventListener("click", () => {
     }
     
     GameManager.reset();
-    if(GameManager.gameMode == "multi") room.send({newRound:true});
+    if(GameManager.gameMode == "multi") {
+
+        room.send({newRound:true});
+    }
 });
 
 playMulti.addEventListener("click", () => {
@@ -52,11 +56,13 @@ playMulti.addEventListener("click", () => {
     playMulti.style.display = "none";
     GameManager.gameMode = "multi";
     GameManager.lastTimestamp = millis();
-    tryToJoinRoom();
-    setTimeout(()=>{
+    
+    setTimeout(function(){
         room.send({playerStatus:1});
-        GameManager.reset();
-    }, 500);
+        console.log("START PLAYER");
+        //GameManager.gameState = 2;
+        
+    }, 1000);
     
 });
 
@@ -84,7 +90,7 @@ function draw() {
                 let e = -1;
                 for(let p in players){
                     if(players[p].sessionId != GameManager.myId && players[p].selection != null){
-                        console.log("ENEMY SELECTION", players[p].selection)
+                        // console.log("ENEMY SELECTION", players[p].selection)
                         e = players[p].selection;
                     }
                 }
@@ -126,6 +132,7 @@ function draw() {
         text(time < 0 ? "GO" : time, width/2, 100);
         if (GameManager.timeElapsed/1000 > GameManager.countDown/1000) {
             GameManager.gameState = 3;
+            console.log("TRY TO CALCULATE MATCH");
             setTimeout(calculateMatch, 1000);
         }
         
@@ -177,7 +184,10 @@ function calculateMatch(){
             }
         }, 1000);
         
-    }else{
+    }
+
+    if(GameManager.gameMode == "multi"){
+        console.log("TRY CALCULATE  MULTIPLAYER");
         GameManager.send();
         if(GameManager.roundState == "winner") GameManager.gameState = 4;
     }
@@ -231,19 +241,20 @@ function shoWinner(){
     
 
 }
-function keyPressed() {
-    if (key === "r") {
-        GameManager.reset();
-        //room.send({newRound:true});
-    }
-    if (key === "s") {
-        GameManager.gameState = 2;
-        GameManager.lastTimestamp = millis();
-        GameManager.winner = "";
-        GameManager.roundState = "waiting";
-        // room.send({newRound:true});
-    }
-}
+
+// function keyPressed() {
+//     if (key === "r") {
+//         GameManager.reset();
+//         //room.send({newRound:true});
+//     }
+//     if (key === "s") {
+//         GameManager.gameState = 2;
+//         GameManager.lastTimestamp = millis();
+//         GameManager.winner = "";
+//         GameManager.roundState = "waiting";
+//         // room.send({newRound:true});
+//     }
+// }
 
 async function loadHandTrackingModel() {
     // Load the MediaPipe handpose model.
