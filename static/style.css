@@ -26,7 +26,8 @@ https://www.color-hex.com/color-palette/89905
   }
   
   #play-again-button{
-      display:none;
+      display:block;
+      margin:0 auto;
   }
   
   #name {

@@ -107,7 +107,7 @@ function draw() {
         
         
     }
-    if(GameManager.gameState == 4 && GameManager.round > 0){
+    if(GameManager.gameState == 4){
         shoWinner();
     }
     image(Animations['arena-front'], 0, height-Animations['arena-front'].height);
@@ -135,18 +135,20 @@ function calculateMatch(){
         GameManager.computerChoice = getNonRepeatRand();
         GameManager.playerChoice = GameManager.getAverageSelection();
         GameManager.winner = "";
-        if( GameManager.checkSingleMatch(GameManager.playerChoice, GameManager.computerChoice) ){
-            GameManager.winner = GameManager.myId;
-        }
-        if( GameManager.checkSingleMatch(GameManager.computerChoice, GameManager.playerChoice) ){
-            GameManager.winner = "computer";
-        }
-        if(GameManager.winner !== ""){
-            GameManager.roundState = "winner";
-            GameManager.gameState = 4;
-        }else{
-            console.log("It is a draw");
-        }
+        setTimeout(() => {
+            if( GameManager.checkSingleMatch(GameManager.playerChoice, GameManager.computerChoice) ){
+                GameManager.winner = GameManager.myId;
+            }
+            if( GameManager.checkSingleMatch(GameManager.computerChoice, GameManager.playerChoice) ){
+                GameManager.winner = "computer";
+            }
+            if(GameManager.winner !== ""){
+                GameManager.roundState = "winner";
+                GameManager.gameState = 4;
+            }else{
+                console.log("It is a draw");
+            }
+        }, 1000);
         
     }else{
         GameManager.send();
@@ -194,7 +196,8 @@ function shoWinner(){
     let winnerLabel = GameManager.myId == GameManager.winner ? "You Win!" : "You Lose!";
     fill(255);
     textSize(40);
-    text(winnerLabel, width/2-100,100);
+    textAlign(CENTER)
+    text(winnerLabel, width/2,100);
     playAgain.style.display = "block";
 
 }
