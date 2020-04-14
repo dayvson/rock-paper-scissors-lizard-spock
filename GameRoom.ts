@@ -7,10 +7,7 @@ export class Player extends Schema {
         this.sessionId = id;
     }
     @type("number")
-    x = Math.floor(Math.random() * 400);
-
-    @type("number")
-    y = Math.floor(Math.random() * 400);
+    status = -1;
 
     @type("number")
     selection = -1;
@@ -35,7 +32,7 @@ export class State extends Schema {
         let result = false;
         if(sel1 == -1 || sel2 == -1) return false;
 
-        if(sel1 == 0 && sel2 == 2 || sel2 == 3){
+        if(sel1 == 0 && (sel2 == 2 || sel2 == 3)){
             result = true;    
         }else if(sel1 == 1 &&  (sel2 == 0 || sel2 == 4)){
             result = true;    
@@ -86,7 +83,7 @@ export class State extends Schema {
             this.roundState = "winner";
         }else{
             console.log("Not a winner yet");
-
+            this.roundState = "draw";
 
         }
     }
@@ -142,9 +139,14 @@ export class GameRoom extends Room<State> {
 
     onMessage (client:Client, data:any) {
         console.log("GameRoom received message from", client.sessionId, ":", data);
+        if(data.playerStatus){
+            this.state.players[ client.sessionId ].status = data.playerStatus;
+        }
+
         if(data.newRound){
             this.state.gotoNextRound();
-        }else{
+        }
+        if(data.select){
             this.state.selectCharacter(client.sessionId, data.select);
         }
     }

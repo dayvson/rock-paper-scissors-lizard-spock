@@ -4,7 +4,19 @@ var room;
 var players = {};
 
 
-client.joinOrCreate("GameRoom").then(room_instance => {
+function tryToJoinRoom(){
+    if(location.hash){
+        console.log(location.hash.substring(1));
+        client.joinById(location.hash.substring(1)).then(JoinRoom).catch((error)=> {
+            client.joinOrCreate("GameRoom" ).then(JoinRoom);
+        });
+    }else{
+        client.joinOrCreate("GameRoom" ).then(JoinRoom);
+    }
+}
+
+
+function JoinRoom(room_instance, err) {
     room = room_instance    
     // listen to patches coming from the server
     room.state.players.onAdd = function (player, sessionId) {
@@ -19,7 +31,11 @@ client.joinOrCreate("GameRoom").then(room_instance => {
         GameManager.round = room.state.round;
         GameManager.winner = room.state.winner;
         GameManager.myId = room.sessionId;   
-        GameManager.roundState = room.state.roundState;     
+        GameManager.roundState = room.state.roundState;
+        if(GameManager.roundState == "draw"){
+            GameManager.reset();
+            room.send({newRound:true});
+        }
     }
 
     room.state.players.onChange = function (player, sessionId) {
@@ -29,6 +45,6 @@ client.joinOrCreate("GameRoom").then(room_instance => {
         GameManager.myId = room.sessionId;
         GameManager.roundState = room.state.roundState;
     }
-
+    location.hash = room.id;
     console.log("My ID:", room.sessionId, room.state.round, room.state.winner);
-});
+};

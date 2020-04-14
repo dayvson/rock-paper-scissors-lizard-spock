@@ -15,13 +15,14 @@ function preload() {
 const playBtn = document.getElementById("play-btn");
 const playImg = document.getElementById("bgtitle");
 const playAgain = document.getElementById("play-again-button");
-
+const playMulti = document.getElementById("play-btn2");
 
 function playButtonHandler(){
     if (GameManager.loading) {
         return;
     }
     GameManager.gameMode = "single";
+    GameManager.myId = "player";
     playBtn.style.display = "none";
     playImg.style.display = "none";
     playAgain.style.display = "none";
@@ -36,8 +37,26 @@ playAgain.addEventListener("click", () => {
     if (GameManager.loading) {
         return;
     }
-    GameManager.lastTimestamp = millis();
+    
     GameManager.reset();
+    if(GameManager.gameMode == "multi") room.send({newRound:true});
+});
+
+playMulti.addEventListener("click", () => {
+    if (GameManager.loading) {
+        return;
+    }
+    playBtn.style.display = "none";
+    playImg.style.display = "none";
+    playAgain.style.display = "none";
+    playMulti.style.display = "none";
+    GameManager.gameMode = "multi";
+    GameManager.lastTimestamp = millis();
+    tryToJoinRoom();
+    setTimeout(()=>{
+        room.send({playerStatus:1});
+        GameManager.reset();
+    }, 500);
     
 });
 
@@ -60,13 +79,17 @@ function draw() {
             showEnemyThumb(GameManager.computerChoice);
             
         }else{
-            let e = -1;
-            for(p in players){
-                if(players[p].sessionId != GameManager.myId){
-                    e = players[p].selection;
+            if(Object.keys(players).length > 1 ){
+                
+                let e = -1;
+                for(let p in players){
+                    if(players[p].sessionId != GameManager.myId && players[p].selection != null){
+                        console.log("ENEMY SELECTION", players[p].selection)
+                        e = players[p].selection;
+                    }
                 }
+                showEnemyThumb(e);
             }
-            showEnemyThumb(e);
         }  
         Animations.clearAnimation();
     }
@@ -93,7 +116,8 @@ function draw() {
         }
     }
 
-    if(GameManager.gameState == 2){
+    if( (GameManager.gameState == 2 && GameManager.gameMode == "single") || 
+        (GameManager.gameState == 2 && GameManager.gameMode == "multi" && GameManager.arePlayersReady())){
         GameManager.timeElapsed = millis() - GameManager.lastTimestamp;
         let time = round((GameManager.countDown - GameManager.timeElapsed) / 1000);
         fill(255);
@@ -115,6 +139,7 @@ function draw() {
 }
 
 
+
 let lastRandom = 0;
 function getNonRepeatRand() {
   while (true) {
@@ -134,6 +159,8 @@ function calculateMatch(){
     if(GameManager.gameMode == "single"){
         GameManager.computerChoice = getNonRepeatRand();
         GameManager.playerChoice = GameManager.getAverageSelection();
+        console.log("GameManager.computerChoice", GameManager.computerChoice);
+        console.log("GameManager.playerChoice", GameManager.playerChoice);
         GameManager.winner = "";
         setTimeout(() => {
             if( GameManager.checkSingleMatch(GameManager.playerChoice, GameManager.computerChoice) ){
@@ -146,13 +173,13 @@ function calculateMatch(){
                 GameManager.roundState = "winner";
                 GameManager.gameState = 4;
             }else{
-                console.log("It is a draw");
+                GameManager.reset();
             }
         }, 1000);
         
     }else{
         GameManager.send();
-        GameManager.gameState = 4;
+        if(GameManager.roundState == "winner") GameManager.gameState = 4;
     }
     
     console.log("######## DONE #######");
@@ -177,15 +204,17 @@ function showVSText(){
     text("VS", width/2,250);
 }
 function showEnemyThumb(index){
+    showVSText();
     push();
     translate(width, 0);
     scale(-1,1);
     if(index > -1){
+        console.log("show enemy ", index, commands[index])
         image(Animations["thumbs"][commands[index]], 130, 100);
     }else{
         image(Animations["thumbs"][commands[enemyRollete]], 130, 100);
         if(int(millis()) % 3 == 0) enemyRollete+=1;
-        if(enemyRollete ==5){
+        if(enemyRollete == 5){
             enemyRollete = 0;
         }
     }
@@ -199,11 +228,11 @@ function shoWinner(){
     textAlign(CENTER)
     text(winnerLabel, width/2,100);
     playAgain.style.display = "block";
+    
 
 }
 function keyPressed() {
     if (key === "r") {
-        GameManager.lastTimestamp = millis();
         GameManager.reset();
         //room.send({newRound:true});
     }
@@ -221,7 +250,8 @@ async function loadHandTrackingModel() {
     model = await handpose.load();
     predictHand();
     GameManager.loading = false;
-    playBtn.innerHTML = "PLAY SINGLE"
+    playBtn.innerHTML = "PLAY SINGLE";
+    playMulti.style.display = "block";
     console.log("Model Loaded and Ready", playBtn);
 }
 

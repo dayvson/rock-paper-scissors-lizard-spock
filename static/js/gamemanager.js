@@ -113,7 +113,7 @@ class GameManager{
     static round = 0;
     static winner = "";
     static myId = "";
-    static gameMode = "single";
+    static gameMode = "-";
     static playerChoice = -1;
     static computerChoice = -1;
     static loading = true;
@@ -143,6 +143,7 @@ class GameManager{
         GameManager.playerChoice = -1;
         GameManager.computerChoice = -1;
         GameManager.gameState = 2;
+        GameManager.lastTimestamp = millis();
         console.log("RESET");
     }
 
@@ -151,12 +152,12 @@ class GameManager{
         let sel = GameManager.getAverageSelection();
         Animations.clearAnimation();
         room.send({select: sel});
-        GameManager.reset();
+        
     }
 
     static checkSingleMatch(sel1, sel2){
         let result = false;
-        if(sel1 == 0 && sel2 == 2 || sel2 == 3){
+        if(sel1 == 0 && (sel2 == 2 || sel2 == 3)){
             result = true;    
         }else if(sel1 == 1 &&  (sel2 == 0 || sel2 == 4)){
             result = true;    
@@ -166,6 +167,19 @@ class GameManager{
             result = true;    
         }else if(sel1 == 4 &&  (sel2 == 0 || sel2 == 2)){
             result = true;    
+        }
+        return result;
+    }
+
+    static arePlayersReady(){
+        if(Object.keys(players).length < 2){
+            return false;
+        }
+        var result = true;
+        for(let k in players){
+            if(players[k].status != 1){
+                result = false;
+            }
         }
         return result;
     }

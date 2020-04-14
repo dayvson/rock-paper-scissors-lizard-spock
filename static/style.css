@@ -61,8 +61,14 @@ https://www.color-hex.com/color-palette/89905
   
   #play-btn {
     position: absolute;
-    left: 378px;
+    left: 278px;
     top: 220px;
+  }
+  #play-btn2{
+    position: absolute;
+    display:none;
+    left: 520px;
+    top: 220px;    
   }
   
   .btn {
